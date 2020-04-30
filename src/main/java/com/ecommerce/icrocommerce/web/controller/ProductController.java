@@ -2,6 +2,7 @@ package com.ecommerce.icrocommerce.web.controller;
 import ch.qos.logback.core.net.SyslogOutputStream;
 import com.ecommerce.icrocommerce.dao.ProductDao;
 import com.ecommerce.icrocommerce.model.Product;
+import com.ecommerce.icrocommerce.web.exceptions.ProduitGratuitException;
 import com.ecommerce.icrocommerce.web.exceptions.ProduitIntrouvableException;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
@@ -17,7 +18,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import javax.validation.Valid;
 import java.io.Console;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Api(description = "API pour les opérations CRUD sur les porduits")
 @RestController
@@ -67,6 +70,10 @@ public class ProductController {
 
         Product productAdded = productDao.save(product);
 
+        if(product.getPrix() == 0) {
+            throw new ProduitGratuitException("Tu peux pas faire ça gratuit frère ! Abuse pas !");
+        }
+
         if(productAdded==null){
             return ResponseEntity.noContent().build();
         }
@@ -96,5 +103,20 @@ public class ProductController {
     @GetMapping(value = "/produits/expensive/{prixLimit}")
     public List<Product> findExpensiveProduct(@PathVariable("prixLimit") int prixLimit){
         return productDao.chercherUnProduitCher(prixLimit);
+    }
+
+    @GetMapping(value="/produits/adminproduits")
+    public Map<String,Integer> calculerMargeProduit() {
+        List<Product> produits = productDao.findAll();
+        Map<String,Integer> map = new HashMap<>();
+        for(Product p: produits) {
+            map.put(p.toString(),p.getPrix() - p.getPrixAchat());
+        }
+        return map;
+    }
+
+    @GetMapping(value="/produits/trier")
+    public List<Product> trierProduitsParOrdreAlphabetique() {
+        return productDao.findByOrderByNomAsc();
     }
 }
